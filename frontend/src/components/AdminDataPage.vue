@@ -4,7 +4,7 @@ import { adminDownload, adminGet, adminPost, type ApiError } from '../api'
 import type { AdminSettings, Row } from '../types'
 
 type ModuleConfig = { endpoint: string; fields: string[]; query?: Record<string, string | number> }
-type EditorField = { key: string; label: string; type: string; options?: string[]; optionLabels?: Record<string, string> }
+type EditorField = { key: string; label: string; type: string; options?: string[]; optionLabels?: Record<string, string>; section?: 'protocol' | 'advanced' }
 
 const props = defineProps<{ id: string; settings: AdminSettings }>()
 const configs: Record<string, ModuleConfig> = {
@@ -68,6 +68,7 @@ const fields = computed(() => config.value?.fields ?? [])
 const editableModule = computed(() => ['users', 'plans', 'subscriptions', 'nodes', 'machines', 'groups', 'routes'].includes(props.id))
 const assignOrder = computed(() => props.id === 'orders' && editorOpen.value && !editorTarget.value)
 const editorTitle = computed(() => props.id === 'mail-templates' ? `编辑邮件模板：${String(editorTarget.value?.label ?? editorTarget.value?.name ?? '')}` : assignOrder.value ? '手动分配订单' : `${editorTarget.value ? '编辑' : '新建'}${({ users: '用户', nodes: '节点', machines: '机器', groups: '权限组', routes: '路由', plans: '套餐', subscriptions: '套餐' } as Record<string, string>)[props.id] ?? '数据'}`)
+const supportsEch = computed(() => ['vless', 'vmess', 'trojan', 'hysteria', 'tuic', 'anytls', 'naive', 'http'].includes(editDraft.value.type || String(editorTarget.value?.type ?? 'vless')))
 const orderDetail = ref<Row | null>(null)
 const actionDetails = ref<{ title: string; value: unknown } | null>(null)
 const selectedUserIds = ref<Set<number>>(new Set())
@@ -126,8 +127,8 @@ const editorFields = computed<EditorField[]>(() => {
       { key: 'rate_time_ranges', label: '时段倍率 JSON 数组', type: 'json' },
       { key: 'custom_outbounds', label: '自定义出站 JSON', type: 'json' }, { key: 'custom_routes', label: '自定义路由 JSON', type: 'json' },
       { key: 'cert_config', label: '证书配置 JSON', type: 'json' }, { key: 'sort', label: '排序值', type: 'number' },
-      ...protocolFields(protocol),
-      { key: 'protocol_settings.__raw', label: '高级协议参数 JSON（保留未显示的协议选项）', type: 'json' },
+      ...protocolFields(protocol).map((field) => ({ ...field, section: 'protocol' as const })),
+      { key: 'protocol_settings.__raw', label: '高级协议参数 JSON（保留未显示的协议选项）', type: 'json', section: 'advanced' as const },
     ]
     return nodeFields
   }
@@ -436,6 +437,19 @@ async function loadEditorOptions() {
     machineOptions.value = Array.isArray(machines) ? machines as Row[] : []
     nodeOptions.value = Array.isArray(nodes) ? nodes as Row[] : []
   } catch (cause) { editorError.value = (cause as ApiError).message || '加载分组或路由选项失败' }
+}
+
+function selectedOptionLabels(field: EditorField): string {
+  const selected = (editDraft.value[field.key] ?? '').split(',').filter(Boolean)
+  if (!selected.length) return '请选择'
+  return selected.map((value) => field.optionLabels?.[value] ?? value).join('、')
+}
+
+function toggleMultiOption(key: string, option: string, event: Event) {
+  const selected = new Set((editDraft.value[key] ?? '').split(',').filter(Boolean))
+  if ((event.target as HTMLInputElement).checked) selected.add(option)
+  else selected.delete(option)
+  editDraft.value[key] = [...selected].join(',')
 }
 
 function openEditor(row?: Row) {
@@ -944,15 +958,18 @@ onMounted(() => void load())
   </section>
   <div v-if="editorOpen" class="editor-overlay" @click.self="editorOpen = false">
     <form class="editor-dialog" @submit.prevent="saveEditor">
-      <header class="editor-header"><div><h2>{{ editorTitle }}</h2><p>{{ assignOrder ? '按邮箱、套餐和订阅周期创建一笔人工订单。' : props.id === 'nodes' ? '选择协议后填写展开的协议参数；高级 JSON 可覆盖未提供专用输入项的设置。' : props.id === 'users' && !editorTarget ? '通过邮箱前缀和域名生成一个或多个用户。' : props.id === 'plans' && editorTarget ? '启用同步选项会立即更新该套餐关联用户的流量、限速、设备数和权限组。' : '提交前请确认所有业务字段。' }}</p><button v-if="id === 'nodes'" type="button" class="button button-secondary ech-generate" @click="generateEchKeys">生成 ECH 密钥</button></div><button type="button" class="editor-close" aria-label="关闭" @click="editorOpen = false">×</button></header>
+      <header class="editor-header"><div><h2>{{ editorTitle }}</h2><p>{{ assignOrder ? '按邮箱、套餐和订阅周期创建一笔人工订单。' : props.id === 'nodes' ? '选择协议后填写展开的协议参数；高级 JSON 可覆盖未提供专用输入项的设置。' : props.id === 'users' && !editorTarget ? '通过邮箱前缀和域名生成一个或多个用户。' : props.id === 'plans' && editorTarget ? '启用同步选项会立即更新该套餐关联用户的流量、限速、设备数和权限组。' : '提交前请确认所有业务字段。' }}</p><button v-if="id === 'nodes' && supportsEch" type="button" class="button button-secondary ech-generate" @click="generateEchKeys">生成 ECH 密钥</button></div><button type="button" class="editor-close" aria-label="关闭" @click="editorOpen = false">×</button></header>
       <div class="editor-fields">
-        <label v-for="field in editorFields" :key="field.key" class="editor-field"><span>{{ field.label }}</span>
-          <select v-if="field.type === 'boolean'" v-model="editDraft[field.key]"><option value="1">是</option><option value="0">否</option></select>
-          <select v-else-if="field.type === 'select'" v-model="editDraft[field.key]" :required="['type', 'period'].includes(field.key)"><option v-for="option in field.options ?? []" :key="option" :value="option">{{ option ? `${option} — ${field.optionLabels?.[option] ?? option}` : (field.key === 'group_id' ? '无权限组' : field.key === 'parent_id' ? '无父节点' : field.key === 'machine_id' ? '未绑定机器' : '默认') }}</option></select>
-          <select v-else-if="field.type === 'multi'" multiple :value="(editDraft[field.key] ?? '').split(',').filter(Boolean)" @change="editDraft[field.key] = Array.from(($event.target as HTMLSelectElement).selectedOptions).map((option) => option.value).join(',')"><option v-for="option in field.options ?? []" :key="option" :value="option">{{ option }} — {{ field.optionLabels?.[option] ?? option }}</option></select>
-          <textarea v-else-if="field.type === 'textarea' || field.type === 'json'" v-model="editDraft[field.key]" :rows="field.type === 'json' ? 9 : 3" :required="field.key === 'content'" :spellcheck="field.type !== 'json'"></textarea>
-          <input v-else v-model="editDraft[field.key]" :type="field.type" :required="['email_suffix', 'email', 'name', 'type', 'host', 'port', 'server_port', 'rate', 'transfer_enable', 'total_amount', 'subject'].includes(field.key)" />
-        </label>
+        <template v-for="(field, fieldIndex) in editorFields" :key="field.key">
+          <div v-if="field.section && editorFields[fieldIndex - 1]?.section !== field.section" class="editor-section-title">{{ field.section === 'protocol' ? `${editDraft.type || editorTarget?.type || '节点'} 协议参数` : '高级参数' }}</div>
+          <div class="editor-field"><span>{{ field.label }}</span>
+            <select v-if="field.type === 'boolean'" v-model="editDraft[field.key]"><option value="1">是</option><option value="0">否</option></select>
+            <select v-else-if="field.type === 'select'" v-model="editDraft[field.key]" :required="['type', 'period'].includes(field.key)"><option v-for="option in field.options ?? []" :key="option" :value="option">{{ option ? `${option} — ${field.optionLabels?.[option] ?? option}` : (field.key === 'group_id' ? '无权限组' : field.key === 'parent_id' ? '无父节点' : field.key === 'machine_id' ? '未绑定机器' : '默认') }}</option></select>
+            <details v-else-if="field.type === 'multi'" class="multi-select-field"><summary>{{ selectedOptionLabels(field) }}</summary><div class="multi-select-options"><label v-for="option in field.options ?? []" :key="option"><input type="checkbox" :checked="(editDraft[field.key] ?? '').split(',').includes(option)" @change="toggleMultiOption(field.key, option, $event)" />{{ field.optionLabels?.[option] ?? option }}</label><span v-if="!field.options?.length" class="multi-select-empty">没有可选项</span></div></details>
+            <textarea v-else-if="field.type === 'textarea' || field.type === 'json'" v-model="editDraft[field.key]" :rows="field.type === 'json' ? 9 : 3" :required="field.key === 'content'" :spellcheck="field.type !== 'json'"></textarea>
+            <input v-else v-model="editDraft[field.key]" :type="field.type" :required="['email_suffix', 'email', 'name', 'type', 'host', 'port', 'server_port', 'rate', 'transfer_enable', 'total_amount', 'subject'].includes(field.key)" />
+          </div>
+        </template>
       </div>
       <p v-if="editorError" class="editor-error" role="alert">{{ editorError }}</p>
       <footer class="editor-footer"><button type="button" class="button button-secondary" :disabled="editorBusy" @click="editorOpen = false">取消</button><button type="submit" class="button button-primary" :disabled="editorBusy">{{ editorBusy ? '保存中…' : '保存' }}</button></footer>
