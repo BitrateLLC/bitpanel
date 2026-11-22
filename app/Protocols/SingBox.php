@@ -20,6 +20,7 @@ class SingBox extends AbstractProtocol
         Server::TYPE_ANYTLS,
         Server::TYPE_SOCKS,
         Server::TYPE_HTTP,
+        Server::TYPE_SNELL,
     ];
     private $config;
     const CUSTOM_TEMPLATE_FILE = 'resources/rules/custom.sing-box.json';
@@ -176,6 +177,9 @@ class SingBox extends AbstractProtocol
             if ($item['type'] === Server::TYPE_HTTP) {
                 $httpConfig = $this->buildHttp($this->user['uuid'], $item);
                 $proxies[] = $httpConfig;
+            }
+            if ($item['type'] === Server::TYPE_SNELL) {
+                $proxies[] = $this->buildSnell($this->user['uuid'], $item);
             }
         }
         foreach ($outbounds as &$outbound) {
@@ -523,6 +527,29 @@ class SingBox extends AbstractProtocol
             }
             unset($inbound['address']);
         }
+    }
+
+    protected function buildSnell($userkey, $server): array
+    {
+        $protocolSettings = data_get($server, 'protocol_settings', []);
+        $version = (int) data_get($protocolSettings, 'version', 5);
+        $array = [
+            'type' => 'snell',
+            'tag' => $server['name'],
+            'server' => $server['host'],
+            'server_port' => $server['port'],
+            'version' => $version === 6 ? 6 : 4,
+            'psk' => data_get($protocolSettings, 'psk'),
+        ];
+
+        if ($version === 6) {
+            $array['userkey'] = $userkey;
+            $array['mode'] = data_get($protocolSettings, 'mode', 'default');
+        } elseif (($obfsMode = data_get($protocolSettings, 'obfs_mode')) && $obfsMode !== 'none') {
+            $array['obfs_mode'] = $obfsMode;
+        }
+
+        return $array;
     }
 
     protected function buildShadowsocks($password, $server)

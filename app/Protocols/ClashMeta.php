@@ -25,6 +25,7 @@ class ClashMeta extends AbstractProtocol
         Server::TYPE_SOCKS,
         Server::TYPE_HTTP,
         Server::TYPE_MIERU,
+        Server::TYPE_SNELL,
     ];
 
     protected $protocolRequirements = [
@@ -192,6 +193,10 @@ class ClashMeta extends AbstractProtocol
             }
             if ($item['type'] === Server::TYPE_MIERU) {
                 array_push($proxy, self::buildMieru($item['password'], $item));
+                array_push($proxies, $item['name']);
+            }
+            if ($item['type'] === Server::TYPE_SNELL) {
+                array_push($proxy, self::buildSnell($item['password'], $item));
                 array_push($proxies, $item['name']);
             }
         }
@@ -681,6 +686,31 @@ class ClashMeta extends AbstractProtocol
             $array['skip-cert-verify'] = (bool) $allowInsecure;
         }
         self::appendEch($array, data_get($protocol_settings, 'tls.ech'));
+
+        return $array;
+    }
+
+    public static function buildSnell($userkey, $server)
+    {
+        $protocolSettings = data_get($server, 'protocol_settings', []);
+        $version = (int) data_get($protocolSettings, 'version', 5);
+        $array = [
+            'name' => $server['name'],
+            'type' => 'snell',
+            'server' => $server['host'],
+            'port' => $server['port'],
+            'psk' => data_get($protocolSettings, 'psk'),
+            'version' => $version,
+        ];
+
+        if ($version === 6) {
+            $array['mode'] = data_get($protocolSettings, 'mode', 'default');
+            if ($userkey) {
+                $array['userkey'] = $userkey;
+            }
+        } elseif (data_get($protocolSettings, 'obfs_mode') === 'http') {
+            $array['obfs-opts'] = ['mode' => 'http'];
+        }
 
         return $array;
     }

@@ -21,6 +21,7 @@ class Surge extends AbstractProtocol
         Server::TYPE_ANYTLS,
         Server::TYPE_SOCKS,
         Server::TYPE_HTTP,
+        Server::TYPE_SNELL,
     ];
     protected $protocolRequirements = [
         'surge.hysteria.protocol_settings.version' => [2 => '2398'],
@@ -75,6 +76,10 @@ class Surge extends AbstractProtocol
                 $proxies .= self::buildHttp($item['password'], $item);
                 $proxyGroup .= $item['name'] . ', ';
             }
+            if ($item['type'] === Server::TYPE_SNELL) {
+                $proxies .= self::buildSnell($item);
+                $proxyGroup .= $item['name'] . ', ';
+            }
         }
 
 
@@ -103,6 +108,27 @@ class Surge extends AbstractProtocol
             ->header('content-disposition', "attachment;filename*=UTF-8''" . rawurlencode($appName) . ".conf");
     }
 
+
+    public static function buildSnell($server)
+    {
+        $protocolSettings = data_get($server, 'protocol_settings', []);
+        $version = (int) data_get($protocolSettings, 'version', 5);
+        $config = [
+            "{$server['name']} = snell",
+            $server['host'],
+            $server['port'],
+            'psk=' . data_get($protocolSettings, 'psk'),
+            "version={$version}",
+        ];
+
+        if ($version === 6) {
+            $config[] = 'mode=' . data_get($protocolSettings, 'mode', 'default');
+        } elseif (data_get($protocolSettings, 'obfs_mode') === 'http') {
+            $config[] = 'obfs=http';
+        }
+
+        return implode(',', $config) . "\r\n";
+    }
 
     public static function buildShadowsocks($password, $server)
     {
