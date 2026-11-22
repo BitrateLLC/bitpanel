@@ -2,36 +2,37 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import LoginView from './components/LoginView.vue'
 import AdminDataPage from './components/AdminDataPage.vue'
+import NavIcon from './components/NavIcon.vue'
 import { adminGet, clearToken, getToken, validateAdminSession } from './api'
 import type { AdminSettings } from './types'
 
 type MenuItem = { id: string; key: string; icon: string; section: string }
 
 const menuItems: MenuItem[] = [
-  { id: 'dashboard', key: 'dashboard', icon: '▦', section: 'overview' },
-  { id: 'users', key: 'userManagement', icon: '♙', section: 'users' },
-  { id: 'tickets', key: 'ticketManagement', icon: '▱', section: 'users' },
-  { id: 'orders', key: 'orderManagement', icon: '▤', section: 'subscriptions' },
-  { id: 'plans', key: 'planManagement', icon: '◇', section: 'subscriptions' },
-  { id: 'subscriptions', key: 'subscriptionManagement', icon: '⌁', section: 'subscriptions' },
-  { id: 'coupons', key: 'couponManagement', icon: '％', section: 'subscriptions' },
-  { id: 'gift-cards', key: 'giftCardManagement', icon: '▣', section: 'subscriptions' },
-  { id: 'nodes', key: 'nodeManagement', icon: '⌘', section: 'infrastructure' },
-  { id: 'machines', key: 'machineManagement', icon: '▣', section: 'infrastructure' },
-  { id: 'groups', key: 'permissionGroupManagement', icon: '◈', section: 'infrastructure' },
-  { id: 'routes', key: 'routeManagement', icon: '⇢', section: 'infrastructure' },
-  { id: 'settings', key: 'systemConfig', icon: '⚙', section: 'system' },
-  { id: 'plugins', key: 'pluginManagement', icon: '▧', section: 'system' },
-  { id: 'themes', key: 'themeConfig', icon: '◐', section: 'system' },
-  { id: 'notices', key: 'noticeManagement', icon: '◉', section: 'system' },
-  { id: 'payments', key: 'paymentConfig', icon: '＄', section: 'system' },
-  { id: 'knowledge', key: 'knowledgeManagement', icon: '▥', section: 'system' },
-  { id: 'plugin-apps', key: 'pluginApps', icon: '▦', section: 'system' },
-  { id: 'system-status', key: 'systemStatus', icon: '◌', section: 'system' },
-  { id: 'audit-logs', key: 'auditLogs', icon: '▤', section: 'system' },
-  { id: 'failed-jobs', key: 'failedJobs', icon: '⚠', section: 'system' },
-  { id: 'mail-templates', key: 'mailTemplates', icon: '✉', section: 'system' },
-  { id: 'traffic', key: 'trafficResetLogs', icon: '⌁', section: 'users' },
+  { id: 'dashboard', key: 'dashboard', icon: 'dashboard', section: 'overview' },
+  { id: 'users', key: 'userManagement', icon: 'users', section: 'users' },
+  { id: 'tickets', key: 'ticketManagement', icon: 'ticket', section: 'users' },
+  { id: 'orders', key: 'orderManagement', icon: 'receipt', section: 'subscriptions' },
+  { id: 'plans', key: 'planManagement', icon: 'package', section: 'subscriptions' },
+  { id: 'subscriptions', key: 'subscriptionManagement', icon: 'refresh', section: 'subscriptions' },
+  { id: 'coupons', key: 'couponManagement', icon: 'ticketPercent', section: 'subscriptions' },
+  { id: 'gift-cards', key: 'giftCardManagement', icon: 'gift', section: 'subscriptions' },
+  { id: 'nodes', key: 'nodeManagement', icon: 'network', section: 'infrastructure' },
+  { id: 'machines', key: 'machineManagement', icon: 'server', section: 'infrastructure' },
+  { id: 'groups', key: 'permissionGroupManagement', icon: 'users', section: 'infrastructure' },
+  { id: 'routes', key: 'routeManagement', icon: 'network', section: 'infrastructure' },
+  { id: 'settings', key: 'systemConfig', icon: 'settings', section: 'system' },
+  { id: 'plugins', key: 'pluginManagement', icon: 'puzzle', section: 'system' },
+  { id: 'themes', key: 'themeConfig', icon: 'contrast', section: 'system' },
+  { id: 'notices', key: 'noticeManagement', icon: 'bell', section: 'system' },
+  { id: 'payments', key: 'paymentConfig', icon: 'card', section: 'system' },
+  { id: 'knowledge', key: 'knowledgeManagement', icon: 'book', section: 'system' },
+  { id: 'plugin-apps', key: 'pluginApps', icon: 'blocks', section: 'system' },
+  { id: 'system-status', key: 'systemStatus', icon: 'activity', section: 'system' },
+  { id: 'audit-logs', key: 'auditLogs', icon: 'file', section: 'system' },
+  { id: 'failed-jobs', key: 'failedJobs', icon: 'alert', section: 'system' },
+  { id: 'mail-templates', key: 'mailTemplates', icon: 'mail', section: 'system' },
+  { id: 'traffic', key: 'trafficResetLogs', icon: 'chart', section: 'users' },
 ]
 
 const locale = ref<'zh-CN' | 'en-US'>('zh-CN')
@@ -52,11 +53,18 @@ const chartDays = ref(14)
 const visibleChartData = computed(() => chartData.value.slice(-chartDays.value))
 const title = computed(() => settings.title || 'BitPanel')
 const strings = computed(() => window.XBOARD_TRANSLATIONS?.[locale.value] ?? {})
+const newMenuLabels: Record<string, Record<'zh-CN' | 'en-US', string>> = {
+  'system-status': { 'zh-CN': '系统状态', 'en-US': 'System Status' },
+  'audit-logs': { 'zh-CN': '操作日志', 'en-US': 'Audit Logs' },
+  'failed-jobs': { 'zh-CN': '失败任务', 'en-US': 'Failed Jobs' },
+  'mail-templates': { 'zh-CN': '邮件模板', 'en-US': 'Mail Templates' },
+}
+const menuText = (item: MenuItem) => translate(`nav.${item.key}`, newMenuLabels[item.id]?.[locale.value] ?? item.key)
 const activeItem = computed(() => menuItems.find((item) => item.id === activeId.value) ?? menuItems[0]!)
-const activeTitle = computed(() => translate(`nav.${activeItem.value.key}`, activeItem.value.key))
+const activeTitle = computed(() => menuText(activeItem.value))
 const visibleItems = computed(() => {
   const query = search.value.trim().toLocaleLowerCase()
-  return menuItems.filter((item) => !query || translate(`nav.${item.key}`, item.key).toLocaleLowerCase().includes(query))
+  return menuItems.filter((item) => !query || menuText(item).toLocaleLowerCase().includes(query))
 })
 const sections = [
   { id: 'overview', key: 'dashboard', label: '工作台' },
@@ -216,7 +224,7 @@ onUnmounted(() => window.removeEventListener('bitpanel:unauthorized', handleUnau
       <nav class="navigation">
         <section v-for="section in sections" :key="section.id" class="nav-section">
           <button v-if="section.id !== 'overview'" class="section-toggle" @click="toggleSection(section.id)">
-            <span class="nav-icon section-icon">{{ section.id === 'system' ? '⚙' : section.id === 'infrastructure' ? '▤' : section.id === 'subscriptions' ? '▣' : '♙' }}</span>
+            <NavIcon class="nav-icon section-icon" :name="section.id === 'system' ? 'settings' : section.id === 'infrastructure' ? 'server' : section.id === 'subscriptions' ? 'package' : 'users'" />
             <span class="section-label">{{ sectionTitle(section.id) }}</span>
             <span class="section-caret" :class="{ open: expandedSections.has(section.id) }">⌃</span>
           </button>
@@ -226,11 +234,11 @@ onUnmounted(() => window.removeEventListener('bitpanel:unauthorized', handleUnau
             :key="item.id"
             class="nav-item"
             :class="{ active: activeId === item.id }"
-            :title="sidebarOpen ? undefined : translate(`nav.${item.key}`, item.key)"
+            :title="sidebarOpen ? undefined : menuText(item)"
             @click="activeId = item.id"
           >
-            <span class="nav-icon">{{ item.icon }}</span>
-            <span v-if="sidebarOpen" class="nav-label">{{ translate(`nav.${item.key}`, item.key) }}</span>
+            <NavIcon class="nav-icon" :name="item.icon" />
+            <span v-if="sidebarOpen" class="nav-label">{{ menuText(item) }}</span>
           </button>
         </section>
       </nav>

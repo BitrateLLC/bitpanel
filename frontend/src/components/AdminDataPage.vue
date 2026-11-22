@@ -254,7 +254,7 @@ function labelFor(field: string): string {
     host: '地址', port: '端口', rate: '倍率', is_active: '状态', remarks: '备注', action: '动作',
     match: '匹配规则', category: '分类', language: '语言', code: '优惠码', limit_use: '使用次数',
     sort: '排序', version: '版本', description: '描述', reset_type: '重置类型', 'group.name': '权限组', 'invite_user.email': '邀请人', users_count: '用户数', active_users_count: '活跃用户', server_count: '节点数', servers_count: '节点数', last_seen_at: '最后心跳', load_status: '负载状态', commission_status: '佣金状态', 'admin.email': '管理员', uri: '请求路径', request_data: '请求参数', exception: '异常信息', connection: '连接', queue: '队列', failed_at: '失败时间', action_value: '动作参数', total_used: '已用流量',
-    trigger_source: '触发来源', cleared_traffic: '清理流量', reset_time: '重置时间', key: '配置项', value: '配置值',
+    trigger_source: '触发来源', cleared_traffic: '清理流量', reset_time: '重置时间', key: '配置项', value: '配置值', label: '模板用途', customized: '模板状态',
   }
   return labels[field] ?? labels[field.split('.').at(-1) ?? field] ?? field
 }
@@ -375,6 +375,7 @@ function formatCell(row: Row, field: string): string {
     return `CPU ${cpuPercent.toFixed(1)}% · 内存 ${formatHistoryBytes(memory.used)} / ${formatHistoryBytes(memory.total)} · 磁盘 ${formatHistoryBytes(disk.used)} / ${formatHistoryBytes(disk.total)}`
   }
   if (['_at', 'reset_time', 'failed_at'].some((suffix) => field.endsWith(suffix)) && value !== '—') return formatHistoryTime(value)
+  if (field === 'customized' && props.id === 'mail-templates') return ['1', 'true'].includes(value.toLowerCase()) ? '已自定义' : '默认模板'
   if (['show', 'enabled', 'enable', 'sell', 'renew', 'is_active', 'banned', 'is_admin', 'is_staff'].includes(field) && value !== '—') {
     return ['1', 'true'].includes(value.toLowerCase()) ? '是' : '否'
   }
