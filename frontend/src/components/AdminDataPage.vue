@@ -350,9 +350,31 @@ function isSecretSetting(key: string): boolean {
   return /password|secret|token|_key/i.test(key)
 }
 
+function loadSummary(row: Row): { cpu: string; memory: string; disk: string } {
+  const status = row.load_status && typeof row.load_status === 'object' ? row.load_status as Record<string, unknown> : {}
+  const memory = status.mem && typeof status.mem === 'object' ? status.mem as Record<string, unknown> : {}
+  const disk = status.disk && typeof status.disk === 'object' ? status.disk as Record<string, unknown> : {}
+  const cpu = Number(status.cpu)
+  const cpuPercent = Number.isFinite(cpu) ? (cpu <= 1 ? cpu * 100 : cpu) : 0
+  return {
+    cpu: `${cpuPercent.toFixed(1)}%`,
+    memory: `${formatHistoryBytes(memory.used)} / ${formatHistoryBytes(memory.total)}`,
+    disk: `${formatHistoryBytes(disk.used)} / ${formatHistoryBytes(disk.total)}`,
+  }
+}
+
 function formatCell(row: Row, field: string): string {
   const value = valueAt(row, field)
-  if (['show', 'enabled', 'enable', 'sell', 'renew', 'is_active'].includes(field) && value !== '—') {
+  if (field === 'load_status' && row.load_status && typeof row.load_status === 'object') {
+    const status = row.load_status as Record<string, unknown>
+    const memory = status.mem && typeof status.mem === 'object' ? status.mem as Record<string, unknown> : {}
+    const disk = status.disk && typeof status.disk === 'object' ? status.disk as Record<string, unknown> : {}
+    const cpu = Number(status.cpu)
+    const cpuPercent = Number.isFinite(cpu) ? (cpu <= 1 ? cpu * 100 : cpu) : 0
+    return `CPU ${cpuPercent.toFixed(1)}% · 内存 ${formatHistoryBytes(memory.used)} / ${formatHistoryBytes(memory.total)} · 磁盘 ${formatHistoryBytes(disk.used)} / ${formatHistoryBytes(disk.total)}`
+  }
+  if (['_at', 'reset_time', 'failed_at'].some((suffix) => field.endsWith(suffix)) && value !== '—') return formatHistoryTime(value)
+  if (['show', 'enabled', 'enable', 'sell', 'renew', 'is_active', 'banned', 'is_admin', 'is_staff'].includes(field) && value !== '—') {
     return ['1', 'true'].includes(value.toLowerCase()) ? '是' : '否'
   }
   if (field === 'transfer_enable' && value !== '—') {
@@ -369,6 +391,7 @@ function formatCell(row: Row, field: string): string {
 function formatHistoryTime(value: unknown): string {
   const timestamp = Number(value)
   if (!Number.isFinite(timestamp)) return String(value ?? '—')
+  if (timestamp <= 0) return '—'
   return new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp).toLocaleString()
 }
 
@@ -900,9 +923,10 @@ onMounted(() => void load())
         <thead><tr><th v-if="id === 'users'"><input type="checkbox" aria-label="选择当前页用户" @change="selectVisibleUsers" /></th><th v-for="field in fields" :key="field">{{ labelFor(field) }}</th><th v-if="['users', 'plans', 'subscriptions', 'nodes', 'tickets', 'machines', 'groups', 'routes', 'orders', 'mail-templates'].includes(id)">操作</th></tr></thead>
         <tbody><tr v-for="(row, index) in filteredRows" :key="String(row.id ?? row.trade_no ?? index)">
           <td v-if="id === 'users'"><input type="checkbox" :checked="selectedUserIds.has(Number(row.id))" :aria-label="`选择用户 ${String(row.email ?? row.id)}`" @change="toggleUserSelection(row, $event)" /></td>
-          <td v-for="field in fields" :key="field">
+          <td v-for="field in fields" :key="field" :class="{ 'load-status-cell': field === 'load_status' }">
             <button v-if="(id === 'plans' || id === 'subscriptions') && ['show', 'sell', 'renew'].includes(field)" class="status-toggle" :class="{ active: isEnabled(row[field]) }" :disabled="actionBusy === `${String(rowId(row))}:${field}`" @click="updateFlag(row, field as 'show' | 'sell' | 'renew')">{{ isEnabled(row[field]) ? '是' : '否' }}</button>
             <button v-else-if="id === 'nodes' && ['show', 'enabled'].includes(field)" class="status-toggle" :class="{ active: isEnabled(row[field]) }" :disabled="actionBusy === `${String(rowId(row))}:${field}`" @click="updateFlag(row, field as 'show' | 'enabled')">{{ isEnabled(row[field]) ? '是' : '否' }}</button>
+            <div v-else-if="field === 'load_status'" class="load-summary"><span>CPU <strong>{{ loadSummary(row).cpu }}</strong></span><span>内存 <strong>{{ loadSummary(row).memory }}</strong></span><span>磁盘 <strong>{{ loadSummary(row).disk }}</strong></span></div>
             <span v-else :title="formatCell(row, field)">{{ formatCell(row, field) }}</span>
           </td>
           <td v-if="['users', 'plans', 'subscriptions', 'nodes', 'tickets', 'machines', 'groups', 'routes', 'orders', 'mail-templates'].includes(id)" class="row-actions">
@@ -940,4 +964,8 @@ onMounted(() => void load())
 
 <style scoped>
 .data-panel{padding:0;overflow:hidden}.data-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 17px;border-bottom:1px solid var(--line)}.data-search{display:flex;align-items:center;gap:8px;max-width:360px;min-width:200px;height:34px;padding:0 10px;border:1px solid var(--line);border-radius:7px;color:#8b97a8}.data-search input{border:0;outline:0;background:transparent;min-width:0;width:100%;color:var(--text);font-size:11px}.data-search input::placeholder{color:#a4adba}.data-toolbar-actions{display:flex;align-items:center;gap:13px}.data-total{font-size:10px;color:#8d98a7}.data-refresh{padding:7px 10px}.table-scroll{overflow:auto}.data-table{width:100%;border-collapse:collapse;white-space:nowrap;text-align:left}.data-table th{height:38px;background:#fafbfd;color:#8490a0;font-size:9px;font-weight:600;padding:0 15px}.data-table td{height:48px;border-top:1px solid #f0f2f6;padding:0 15px;color:#4d5b70;font-size:10px;max-width:260px}.data-table td span{display:block;overflow:hidden;text-overflow:ellipsis}.data-table tr:hover td{background:#fafbff}.data-state{min-height:190px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;color:#96a1b0;font-size:11px}.data-error{color:#bd5962}.data-error strong{font-size:12px}.data-error span{max-width:80%;text-align:center}.spinner{width:17px;height:17px;border:2px solid #dce3ef;border-top-color:#5974de;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.pagination-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line);color:#8995a5;font-size:10px}.pagination-bar div{display:flex;gap:6px}.pagination-bar button{border:1px solid var(--line);background:var(--surface);color:#677487;border-radius:6px;padding:6px 9px;font-size:10px}.pagination-bar button:disabled{opacity:.45;cursor:not-allowed}.is-dark .data-table th{background:#222c3b}.is-dark .data-table td{color:#b6c1d0;border-color:#303a49}.is-dark .data-table tr:hover td{background:#222c3b}
+
+/* Keep data-heavy admin views legible at normal desktop zoom. */
+.data-toolbar{padding:16px 20px}.data-search{height:38px;max-width:420px}.data-search input{font-size:13px}.data-total{font-size:12px}.data-refresh,.button-primary{font-size:12px;padding:8px 12px}.data-table th{height:44px;padding:0 14px;font-size:11px}.data-table td{height:56px;padding:0 14px;font-size:12px;max-width:320px}.data-table td span{line-height:1.4}.data-table td.row-actions{min-width:360px;max-width:none;white-space:normal}.data-table td.load-status-cell{min-width:280px;max-width:380px;white-space:normal}.load-summary{display:flex;flex-wrap:wrap;gap:5px}.load-summary span{padding:4px 7px;border:1px solid #e5eaf0;border-radius:5px;background:#fafbfd;color:#768398;font-size:11px;white-space:nowrap}.load-summary strong{color:#35445a;font-size:11px;font-weight:650}.is-dark .load-summary span{border-color:#39465a;background:#222c3b;color:#b6c2d1}.is-dark .load-summary strong{color:#e0e7f0}.row-actions{flex-wrap:wrap;gap:7px;min-width:340px;max-width:460px}.row-actions button{padding:6px 9px;font-size:11px}.commission-select{font-size:11px}.status-toggle{font-size:11px;padding:4px 10px}.pagination-bar{font-size:12px}.pagination-bar button{font-size:11px;padding:7px 10px}.inline-action-error{font-size:12px}
+@media(max-width:1100px){.data-table td:has(.row-actions){min-width:320px}.row-actions{min-width:300px;max-width:380px}}
 </style>
