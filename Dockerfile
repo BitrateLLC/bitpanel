@@ -1,3 +1,11 @@
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /www/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM phpswoole/swoole:php8.2-alpine AS runtime
 
 RUN php -r 'if (version_compare(PHP_VERSION, "8.2.35", "<")) { \
@@ -45,6 +53,7 @@ WORKDIR /www
 COPY .docker /
 
 COPY . .
+COPY --from=frontend-build /www/frontend/dist/ /www/public/assets/admin/
 
 COPY .docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY .docker/caddy/Caddyfile /etc/caddy/Caddyfile

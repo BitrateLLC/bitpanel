@@ -1,0 +1,72 @@
+.avatar-button {
+    border: 0;
+    cursor: pointer;
+}
+.avatar-button:hover {
+    box-shadow: 0 0 0 3px #667be522;
+}
+.api-error {
+    background: #fff4f2;
+    border-color: #f4dad5;
+    color: #a74d43;
+}
+.api-error p {
+    color: #a8655d;
+}
+.is-dark .api-error {
+    background: #3a292a;
+    border-color: #593c3e;
+    color: #f0c5bf;
+}
+.is-dark .api-error p {
+    color: #d7a6a0;
+}
+.metric-card .metric-value {
+    font-variant-numeric: tabular-nums;
+}
+.auth-check .brand-mark {
+    box-shadow: 0 5px 14px #4159ca55;
+}
+.chart-bars {
+    position: absolute;
+    left: 32px;
+    right: 4px;
+    top: 8px;
+    bottom: 22px;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+}
+.chart-bar-column {
+    height: 100%;
+    flex: 1;
+    min-width: 3px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 5px;
+    z-index: 1;
+}
+.chart-bar {
+    width: min(100%, 18px);
+    min-height: 3px;
+    border-radius: 4px 4px 1px 1px;
+    background: linear-gradient(180deg, #8598f5, #5b73dd);
+    opacity: 0.86;
+}
+.chart-bar-column small {
+    font-size: 8px;
+    color: #9ca7b5;
+    white-space: nowrap;
+    transform: rotate(-30deg);
+    transform-origin: top center;
+}
+.chart-grid-lines {
+    position: absolute;
+    inset: 8px 2px 26px 32px;
+    z-index: 0;
+}
+.chart-axis {
+    display: none;
+}
