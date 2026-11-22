@@ -112,7 +112,7 @@ class SingBox extends AbstractProtocol
 
     public function handle()
     {
-        $appName = admin_setting('app_name', 'XBoard');
+        $appName = admin_setting('app_name', 'BitPanel');
         $this->config = $this->loadConfig();
         $this->buildOutbounds();
         $this->buildRule();

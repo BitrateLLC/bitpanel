@@ -1,4 +1,4 @@
-# Xboard
+# BitPanel
 
 <div align="center">
 
@@ -11,7 +11,7 @@
 
 ## 📖 Introduction
 
-Xboard is a modern panel system built on Laravel 11, focusing on providing a clean and efficient user experience.
+BitPanel is a modern panel system built on Laravel 12, focusing on providing a clean and efficient user experience.
 
 ## ✨ Features
 
@@ -24,8 +24,8 @@ Xboard is a modern panel system built on Laravel 11, focusing on providing a cle
 ## 🚀 Quick Start
 
 ```bash
-git clone -b compose --depth 1 https://github.com/cedar2025/Xboard && \
-cd Xboard && \
+git clone --depth 1 https://github.com/BitrateLLC/bitpanel.git && \
+cd bitpanel && \
 docker compose run -it --rm \
     -e ENABLE_SQLITE=true \
     -e ENABLE_REDIS=true \
@@ -43,7 +43,7 @@ docker compose up -d
 > 🚨 **Important:** This version involves significant changes. Please strictly follow the upgrade documentation and backup your database before upgrading. Note that upgrading and migration are different processes, do not confuse them.
 
 ### Development Guides
-- [Plugin Development Guide](./docs/en/development/plugin-development-guide.md) - Complete guide for developing XBoard plugins
+- [Plugin Development Guide](./docs/en/development/plugin-development-guide.md) - Complete guide for developing BitPanel plugins
 
 ### Deployment Guides
 
@@ -61,7 +61,7 @@ PHP **8.2.35 or later** is required. Use the latest security patch for your PHP 
 
 ## 🛠️ Tech Stack
 
-- Backend: Laravel 11 + Octane
+- Backend: Laravel 12 + Octane
 - Admin Panel: React + Shadcn UI + TailwindCSS
 - User Frontend: Vue3 + TypeScript + NaiveUI
 - Deployment: Docker + Docker Compose
@@ -106,4 +106,4 @@ Issues and Pull Requests are welcome to help improve the project.
 
 ## 📈 Star History
 
-[![Stargazers over time](https://starchart.cc/cedar2025/Xboard.svg)](https://starchart.cc/cedar2025/Xboard)
+[![Stargazers over time](https://starchart.cc/BitrateLLC/bitpanel.svg)](https://starchart.cc/BitrateLLC/bitpanel)

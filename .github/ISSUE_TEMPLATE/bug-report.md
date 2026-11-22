@@ -7,14 +7,14 @@ assignees: ''
 ---
 
 <!-- 🔴 请注意：XrayR等非XBoard问题请前往相应项目提问 -->
-<!-- 🔴 Note: For XrayR and other non-XBoard issues, please report to their respective projects -->
+<!-- 🔴 Note: For XrayR and other non-BitPanel issues, please report to their respective projects -->
 
 > ⚠️ 请务必按照模板填写完整信息，没有详细描述的issue可能会被忽略或关闭
 > ⚠️ Please follow the template to provide complete information, issues without detailed description may be ignored or closed
 
 **基本信息 | Basic Info**
 ```yaml
-XBoard版本 | Version:
+BitPanel版本 | Version:
 部署方式 | Deployment: [Docker/手动部署]
 PHP版本 | Version:
 数据库 | Database:
