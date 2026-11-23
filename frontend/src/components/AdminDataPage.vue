@@ -449,14 +449,27 @@ async function loadEditorOptions() {
   } catch (cause) { editorError.value = (cause as ApiError).message || '加载分组或路由选项失败' }
 }
 
+function selectedMultiValues(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map(String)
+  const value = String(raw ?? '').trim()
+  if (!value) return []
+  if (value.startsWith('[')) {
+    try {
+      const parsed: unknown = JSON.parse(value)
+      if (Array.isArray(parsed)) return parsed.map(String)
+    } catch {}
+  }
+  return value.split(',').map((part) => part.trim()).filter(Boolean)
+}
+
 function selectedOptionLabels(field: EditorField): string {
-  const selected = (editDraft.value[field.key] ?? '').split(',').filter(Boolean)
+  const selected = selectedMultiValues(editDraft.value[field.key])
   if (!selected.length) return '请选择'
   return selected.map((value) => field.optionLabels?.[value] ?? value).join('、')
 }
 
 function toggleMultiOption(key: string, option: string, event: Event) {
-  const selected = new Set((editDraft.value[key] ?? '').split(',').filter(Boolean))
+  const selected = new Set(selectedMultiValues(editDraft.value[key]))
   if ((event.target as HTMLInputElement).checked) selected.add(option)
   else selected.delete(option)
   editDraft.value[key] = [...selected].join(',')
@@ -477,7 +490,7 @@ function openEditor(row?: Row) {
     } else if (field.type === 'json') {
       draft[field.key] = JSON.stringify(raw ?? {}, null, 2)
     } else if (field.type === 'csv' || field.type === 'multi') {
-      draft[field.key] = Array.isArray(raw) ? raw.join(',') : String(raw ?? '')
+      draft[field.key] = selectedMultiValues(raw).join(',')
     } else if (field.type === 'boolean') {
       draft[field.key] = isEnabled(raw) ? '1' : '0'
     } else {
@@ -491,8 +504,8 @@ function openEditor(row?: Row) {
     draft.server_port = '443'
     draft.show = '1'
     draft.enabled = '1'
-    draft.group_ids = '[]'
-    draft.route_ids = '[]'
+    draft.group_ids = ''
+    draft.route_ids = ''
     draft['protocol_settings.__raw'] = '{\n  "tls": 0,\n  "network": "tcp"\n}'
     draft['protocol_settings.tls'] = '0'
     draft['protocol_settings.network'] = 'tcp'
@@ -554,9 +567,8 @@ function makeEditorPayload(): Row {
     if (field.type === 'json') {
       try { payload[field.key] = raw.trim() ? JSON.parse(raw) : {} } catch { throw new Error(`${field.label}不是有效 JSON`) }
     } else if (field.type === 'csv' || field.type === 'multi') {
-      if (raw.trim().startsWith('[')) {
-        try { payload[field.key] = JSON.parse(raw) } catch { throw new Error(`${field.label}不是有效数组`) }
-      } else payload[field.key] = raw.split(',').map((part) => part.trim()).filter(Boolean).map((part) => field.key !== 'group_ids' && /^\d+$/.test(part) ? Number(part) : part)
+      const values = selectedMultiValues(raw)
+      payload[field.key] = values.map((part) => field.key !== 'group_ids' && /^\d+$/.test(part) ? Number(part) : part)
     } else if (field.type === 'boolean') {
       payload[field.key] = raw === '1'
     } else if (field.type === 'select') {
@@ -970,11 +982,11 @@ onMounted(() => void load())
   </section>
   <div v-if="editorOpen" class="editor-overlay" @click.self="editorOpen = false">
     <form class="editor-dialog" @submit.prevent="saveEditor">
-      <header class="editor-header"><div><h2>{{ editorTitle }}</h2><p>{{ assignOrder ? '按邮箱、套餐和订阅周期创建一笔人工订单。' : props.id === 'nodes' ? '选择协议后填写展开的协议参数；高级 JSON 可覆盖未提供专用输入项的设置。' : props.id === 'users' && !editorTarget ? '通过邮箱前缀和域名生成一个或多个用户。' : props.id === 'plans' && editorTarget ? '启用同步选项会立即更新该套餐关联用户的流量、限速、设备数和权限组。' : '提交前请确认所有业务字段。' }}</p><button v-if="id === 'nodes' && supportsEch" type="button" class="button button-secondary ech-generate" @click="generateEchKeys">生成 ECH 密钥</button></div><button type="button" class="editor-close" aria-label="关闭" @click="editorOpen = false">×</button></header>
+      <header class="editor-header"><div><h2>{{ editorTitle }}</h2><p>{{ assignOrder ? '按邮箱、套餐和订阅周期创建一笔人工订单。' : props.id === 'nodes' ? '选择协议后填写展开的协议参数；高级 JSON 可覆盖未提供专用输入项的设置。' : props.id === 'users' && !editorTarget ? '通过邮箱前缀和域名生成一个或多个用户。' : props.id === 'plans' && editorTarget ? '启用同步选项会立即更新该套餐关联用户的流量、限速、设备数和权限组。' : '提交前请确认所有业务字段。' }}</p></div><button type="button" class="editor-close" aria-label="关闭" @click="editorOpen = false">×</button></header>
       <div class="editor-fields">
         <template v-for="(field, fieldIndex) in editorFields" :key="field.key">
           <div v-if="field.section && editorFields[fieldIndex - 1]?.section !== field.section" class="editor-section-title">{{ field.section === 'protocol' ? `${editDraft.type || editorTarget?.type || '节点'} 协议参数` : '高级参数' }}</div>
-          <div class="editor-field"><span>{{ field.label }}</span>
+          <div class="editor-field"><div v-if="field.key.endsWith('.ech.config')" class="editor-field-label"><span>{{ field.label }}</span><button v-if="id === 'nodes' && supportsEch && editDraft[field.key.replace(/\.config$/, '.enabled')] === '1'" type="button" class="button button-secondary ech-generate" @click="generateEchKeys">生成 ECH 密钥</button></div><span v-else>{{ field.label }}</span>
             <select v-if="field.type === 'boolean'" v-model="editDraft[field.key]"><option value="1">是</option><option value="0">否</option></select>
             <select v-else-if="field.type === 'select'" v-model="editDraft[field.key]" :required="['type', 'period'].includes(field.key)"><option v-for="option in field.options ?? []" :key="option" :value="option">{{ option ? `${option} — ${field.optionLabels?.[option] ?? option}` : (field.key === 'group_id' ? '无权限组' : field.key === 'parent_id' ? '无父节点' : field.key === 'machine_id' ? '未绑定机器' : '默认') }}</option></select>
             <details v-else-if="field.type === 'multi'" class="multi-select-field"><summary>{{ selectedOptionLabels(field) }}</summary><div class="multi-select-options"><label v-for="option in field.options ?? []" :key="option"><input type="checkbox" :checked="(editDraft[field.key] ?? '').split(',').includes(option)" @change="toggleMultiOption(field.key, option, $event)" />{{ field.optionLabels?.[option] ?? option }}</label><span v-if="!field.options?.length" class="multi-select-empty">没有可选项</span></div></details>

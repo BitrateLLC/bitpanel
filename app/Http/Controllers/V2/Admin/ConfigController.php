@@ -199,7 +199,6 @@ class ConfigController extends Controller
                     subscribe_template('singbox') ?? '',
                     'json'
                 ),
-                'subscribe_template_clash' => subscribe_template('clash') ?? '',
                 'subscribe_template_clashmeta' => subscribe_template('clashmeta') ?? '',
                 'subscribe_template_stash' => subscribe_template('stash') ?? '',
                 'subscribe_template_surge' => subscribe_template('surge') ?? '',
@@ -214,7 +213,6 @@ class ConfigController extends Controller
 
         $templateKeys = [
             'subscribe_template_singbox' => 'singbox',
-            'subscribe_template_clash' => 'clash',
             'subscribe_template_clashmeta' => 'clashmeta',
             'subscribe_template_stash' => 'stash',
             'subscribe_template_surge' => 'surge',
