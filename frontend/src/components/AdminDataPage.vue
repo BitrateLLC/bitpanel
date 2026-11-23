@@ -211,8 +211,9 @@ function protocolFields(type: string): EditorField[] {
     ]
     case 'mieru': return [{ key: 'protocol_settings.transport', label: '传输方式', type: 'select', options: ['TCP', 'UDP'] }, { key: 'protocol_settings.traffic_pattern', label: '流量模式', type: 'text' }, ...multiplex]
     case 'snell': return [
-      { key: 'protocol_settings.version', label: 'Snell 版本', type: 'select', options: ['5', '6'] }, { key: 'protocol_settings.psk', label: 'PSK', type: 'password' },
-      { key: 'protocol_settings.obfs_mode', label: '混淆模式', type: 'select', options: ['none', 'http'] }, { key: 'protocol_settings.mode', label: '流量模式', type: 'select', options: ['default', 'unshaped', 'unsafe-raw'] },
+      { key: 'protocol_settings.version', label: 'Snell 版本', type: 'select', options: ['5', '6'], optionLabels: { '5': '推荐，兼容 Clash / Surge / sing-box', '6': '仅 mihomo Alpha 支持 userkey，Clash 正式版连不上' } },
+      { key: 'protocol_settings.psk', label: 'PSK', type: 'password' },
+      { key: 'protocol_settings.obfs_mode', label: '混淆模式（仅 v5 生效）', type: 'select', options: ['none', 'http'] }, { key: 'protocol_settings.mode', label: '流量模式（仅 v6 生效）', type: 'select', options: ['default', 'unshaped', 'unsafe-raw'] },
     ]
     case 'socks': return [tlsMode, ...tlsSettings]
     case 'naive':
