@@ -230,6 +230,7 @@ class ClashMeta extends AbstractProtocol
         $config = $this->buildRules($config);
 
         $yaml = Yaml::dump($config, 2, 4, Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
+        $yaml = self::quoteSnellSecrets($yaml);
         $yaml = str_replace('$app_name', admin_setting('app_name', 'BitPanel'), $yaml);
         return response($yaml)
             ->header('content-type', 'text/yaml')
@@ -842,5 +843,29 @@ class ClashMeta extends AbstractProtocol
                 'query-server-name' => data_get($normalized, 'query_server_name'),
             ], fn($value) => $value !== null);
         }
+    }
+
+    /**
+     * Snell 的 psk / userkey 是不透明字符串，可能是纯数字、"0x" 开头或
+     * yes/no 之类的标量。YAML dumper 只按启发式决定是否加引号，客户端
+     * 一旦把它解析成 int/bool，psk 就和节点上的值不一致，握手必然失败。
+     * 这里统一强制用单引号包裹，已经带引号的值原样保留。
+     */
+    protected static function quoteSnellSecrets(string $yaml): string
+    {
+        $quoted = preg_replace_callback(
+            '/(?<![\w-])(psk|userkey):[ \t]*([^\s,}\]]+)/',
+            function (array $matches) {
+                $value = $matches[2];
+                if ($value !== '' && ($value[0] === "'" || $value[0] === '"')) {
+                    return $matches[0];
+                }
+
+                return $matches[1] . ": '" . str_replace("'", "''", $value) . "'";
+            },
+            $yaml
+        );
+
+        return $quoted ?? $yaml;
     }
 }
