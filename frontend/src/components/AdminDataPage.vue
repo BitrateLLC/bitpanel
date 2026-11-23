@@ -556,7 +556,7 @@ function makeEditorPayload(): Row {
     } else if (field.type === 'csv' || field.type === 'multi') {
       if (raw.trim().startsWith('[')) {
         try { payload[field.key] = JSON.parse(raw) } catch { throw new Error(`${field.label}不是有效数组`) }
-      } else payload[field.key] = raw.split(',').map((part) => part.trim()).filter(Boolean).map((part) => /^\d+$/.test(part) ? Number(part) : part)
+      } else payload[field.key] = raw.split(',').map((part) => part.trim()).filter(Boolean).map((part) => field.key !== 'group_ids' && /^\d+$/.test(part) ? Number(part) : part)
     } else if (field.type === 'boolean') {
       payload[field.key] = raw === '1'
     } else if (field.type === 'select') {
